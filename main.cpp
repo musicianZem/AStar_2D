@@ -23,8 +23,9 @@ bool isOutofBound(int i, int j) {
 
 class Cell {
     public :
+        int FScore;
         int i, j;
-        int FScore, GScore, HScore;
+        int GScore, HScore;
         // F : total
         // G : 이 Cell까지 걸린 비용
         // H : 예상 비용
@@ -39,15 +40,15 @@ class Cell {
         void calFScore() {
             FScore = HScore + GScore;
         }
+
 };
 
-bool compCell( const Cell& c1, const Cell& c2 ) {
-    return c1.FScore > c2.FScore;
+bool operator < ( const Cell& c1, const Cell& c2 ) {
+    return c1.FScore < c2.FScore;
 }
 
 SDL_Window *window;
 SDL_Renderer *renderer;
-vector<pair<int, int>> path;
 
 void initSDL();
 bool pollEvent();
@@ -71,26 +72,26 @@ int main() {
 }
 
 void astar() {
-    path.clear();
-    vector<Cell> O, C;
+    set<Cell> O;
+    set<Cell> C;
     Cell firstCell( fromI, fromJ );
     firstCell.GScore = 0;
-    firstCell.FScore = firstCell.HScore;
     firstCell.calHScore();
+    firstCell.FScore = firstCell.HScore;
     firstCell.pi = fromI;
     firstCell.pj = fromJ;
-    O.push_back( firstCell );
+    O.insert( firstCell );
     obstacle[1][3] = 1;
     obstacle[2][3] = 1;
     obstacle[3][3] = 1;
     obstacle[3][2] = 1;
     obstacle[3][1] = 1;
 
+    Cell *lastCell;
     while( !O.empty() ) {
-        sort( O.begin(), O.end(), [](const Cell& o1, const Cell& o2){ return o1.FScore < o2.FScore; });
-        Cell beforeCell = O[0];
-        C.push_back( beforeCell );
-        O.erase( O.begin() );
+        Cell beforeCell = *O.begin(); O.erase( O.begin() );
+        C.insert( beforeCell );
+        lastCell = &beforeCell;
 
         if( beforeCell.HScore < 1 ) break;
 
@@ -116,26 +117,25 @@ void astar() {
                 nextCell.pi = beforeCell.i;
                 nextCell.pj = beforeCell.j;
 
-                for(auto &o : O) {
-                    if( o.i == i && o.j == j ) {
-                        isExist = true;
-                        if( o.FScore > nextCell.FScore ) {
-                            o = nextCell;
+                for(set<Cell>::iterator o = O.begin(); o != O.end(); o++) {
+                    if( o->i == i && o->j == j ) {
+                        if( o->FScore > nextCell.FScore ) {
+                            O.erase( o );
                         }
                         break;
                     }
                 }
-                if( !isExist ) {
-                    O.push_back( nextCell );
-                }
+                O.insert( nextCell );
             }
         }
     }
 
-    int traceI = C.back().pi, traceJ = C.back().pj;
+    cout << "tracing\n";
+    int traceI = lastCell->pi, traceJ = lastCell->pj;
     while( traceI != fromI || traceJ != fromJ ) {
+        cout << traceI << " " << traceJ << endl;
         obstacle[ traceI ][ traceJ ] = -1;
-        for(vector<Cell>::iterator it = C.begin(); it != C.end(); ) {
+        for(set<Cell>::iterator it = C.begin(); it != C.end(); ) {
             if( it->i == traceI && it->j == traceJ ) {
                 traceI = it->pi;
                 traceJ = it->pj;
@@ -176,11 +176,19 @@ bool pollEvent() {
                 }
                 if( e.button.button == SDL_BUTTON_RIGHT ) {
                     if( setStart ) {
-                        fromI = mouse_sx / 12;
-                        fromJ = mouse_sy / 12;
+                        fromI = mouse_sx / 10;
+                        fromJ = mouse_sy / 10;
+                        if( fromI < 0 ) fromI = 0;
+                        if( fromI >= 159 ) fromI = 159; 
+                        if( fromJ < 0 ) fromJ = 0;
+                        if( fromJ >= 159 ) fromJ = 159; 
                     } else {
-                        goalI = mouse_sx / 12;
-                        goalJ = mouse_sy / 12;
+                        goalI = mouse_sx / 10;
+                        goalJ = mouse_sy / 10;
+                        if( goalI < 0 ) goalI = 0;
+                        if( goalI >= 159 ) goalI = 159; 
+                        if( goalJ < 0 ) goalJ = 0;
+                        if( goalJ >= 159 ) goalJ = 159; 
                     }
                     setStart = setStart == false;
                 }
@@ -190,8 +198,12 @@ bool pollEvent() {
                 if( e.button.button == SDL_BUTTON_LEFT ) {
                     if( mouse_sx > mouse_ex ) swap( mouse_sx, mouse_ex );
                     if( mouse_sy > mouse_ey ) swap( mouse_sy, mouse_ey );
-                    int si = mouse_sx/12, sj = mouse_sy/12;
-                    int ei = mouse_ex/12, ej = mouse_ey/12;
+                    int si = mouse_sx/10, sj = mouse_sy/10;
+                    int ei = mouse_ex/10, ej = mouse_ey/10;
+                    if( si < 0 ) si = 0;
+                    if( sj >= 159 ) sj = 159; 
+                    if( ei < 0 ) ei = 0;
+                    if( ej >= 159 ) ej = 159; 
                     for(int i=si; i<=ei; i++) {
                         for(int j=sj; j<=ej; j++) {
                             obstacle[ i ][ j ] = 1;
@@ -199,6 +211,22 @@ bool pollEvent() {
                     }
                 }
                 if( e.button.button == SDL_BUTTON_RIGHT ) {
+                }
+                break;
+            case SDL_KEYDOWN :
+                switch( e.key.keysym.sym ) {
+                    case SDLK_BACKSPACE :
+                        int si = mouse_sx/10, sj = mouse_sy/10;
+                        int ei = mouse_ex/10, ej = mouse_ey/10;
+                        if( si < 0 ) si = 0;
+                        if( sj >= 159 ) sj = 159; 
+                        if( ei < 0 ) ei = 0;
+                        if( ej >= 159 ) ej = 159; 
+                        for(int i=si; i<=ei; i++) {
+                            for(int j=sj; j<=ej; j++) {
+                                obstacle[ i ][ j ] = 0;
+                            }
+                        }
                 }
                 break;
         }
@@ -209,11 +237,11 @@ bool pollEvent() {
 void render() {
     SDL_SetRenderDrawColor( renderer, 0, 0, 0, 0 );
     SDL_Rect rect;
-    rect.w = 12; rect.h = 12;
+    rect.w = 10; rect.h = 10;
     for(int i=0; i<160; i++) {
         for(int j=0; j<90; j++) {
-            rect.x = i*12;
-            rect.y = j*12;
+            rect.x = i*10;
+            rect.y = j*10;
             if( i == goalI && j == goalJ ) {
                 SDL_SetRenderDrawColor( renderer, 0, 0, 255, 0 );
                 SDL_RenderFillRect( renderer, &rect );
