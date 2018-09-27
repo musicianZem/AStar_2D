@@ -9,9 +9,6 @@ using namespace std;
 int obstacle[160][90];
 int fromI = 0, fromJ = 0, goalI = 15, goalJ = 8;
 bool hasPath = true;
-const int I = 0;
-const int J = 1;
-const int D = 2;
 int nextPosition[8][3] = {
     {-1, -1, 3}, {-1,  1, 3}, { 1, -1, 3}, { 1,  1, 3},
     {-1,  0, 2}, { 1,  0, 2}, { 0, -1, 2}, { 0,  1, 2}
@@ -24,45 +21,47 @@ bool isOutofBound(int i, int j) {
 class Cell {
     public :
         int i, j;
-        int FScore, GScore, HScore;
         // F : total
         // G : 이 Cell까지 걸린 비용
         // H : 예상 비용
-        int pi, pj;
+        mutable int FScore, GScore, HScore;
+        mutable int pi, pj;
 
-        Cell(int i = 0, int j = 0) : i(i), j(j) {}
-
-        void calHScore() {
-            HScore = 2 * (abs(goalI - i) + abs(goalJ - j));
+        Cell(int i = 0, int j = 0) : i(i), j(j) {} 
+        int getH() const {
+            return 1 * (abs(goalI - i) + abs(goalJ - j));
+        } 
+        int getF() const {
+            return getH() + GScore;
         }
-
-        void calFScore() {
-            FScore = HScore + GScore;
+        bool operator<(const Cell& h) const {
+            return !(getF() < h.getF());
         }
+}; 
+
+struct SetComparer {
+    bool operator() (const Cell& lhs, const Cell& rhs) const {
+        if(lhs.i == rhs.i) return lhs.j < rhs.j; 
+        return lhs.i < rhs.i;
+    }
 };
-
-bool compCell( const Cell& c1, const Cell& c2 ) {
-    return c1.FScore > c2.FScore;
-}
 
 SDL_Window *window;
 SDL_Renderer *renderer;
-vector<pair<int, int>> path;
 
 void initSDL();
 bool pollEvent();
 void render();
 void astar();
+void kstar();
 
 int main() {
     initSDL();
 
     while( !pollEvent() ) {
-        SDL_RenderClear( renderer );
-
-        astar();
-        render();
-
+        SDL_RenderClear( renderer ); 
+        kstar();
+        render(); 
         SDL_RenderPresent( renderer );
     }
     SDL_DestroyWindow( window );
@@ -70,88 +69,89 @@ int main() {
     SDL_Quit();
 }
 
-void astar() {
-    path.clear();
-    vector<Cell> O, C;
+void kstar() {
     Cell firstCell( fromI, fromJ );
     firstCell.GScore = 0;
-    firstCell.FScore = firstCell.HScore;
-    firstCell.calHScore();
     firstCell.pi = fromI;
     firstCell.pj = fromJ;
-    O.push_back( firstCell );
+    std::set<Cell, SetComparer> C;
+    C.insert( firstCell );
     obstacle[1][3] = 1;
     obstacle[2][3] = 1;
     obstacle[3][3] = 1;
     obstacle[3][2] = 1;
-    obstacle[3][1] = 1;
+    obstacle[3][1] = 1; 
 
-    while( !O.empty() ) {
-        sort( O.begin(), O.end(), [](const Cell& o1, const Cell& o2){ return o1.FScore < o2.FScore; });
-        Cell beforeCell = O[0];
-        C.push_back( beforeCell );
-        O.erase( O.begin() );
+    std::priority_queue<Cell> queueO;
+    std::set<Cell, SetComparer> setO; 
+    for(int pos=4; pos<8; pos++) {
+        int i = firstCell.i + nextPosition[pos][0];
+        int j = firstCell.j + nextPosition[pos][1];
 
-        if( beforeCell.HScore < 1 ) break;
+        if( !isOutofBound(i, j) ) {
+            if( obstacle[i][j] == 1) continue;
 
-        Cell nextCell;
-        for(int pos=0; pos<8; pos++) {
+            Cell nextCell;
+            nextCell.i = i; nextCell.j = j;
+            nextCell.GScore = firstCell.GScore + nextPosition[pos][2];
+            nextCell.pi = firstCell.i;
+            nextCell.pj = firstCell.j; 
+            setO.insert(nextCell); 
+            queueO.push(nextCell);
+        }
+    }
+
+    while(!queueO.empty()) {
+        Cell beforeCell = queueO.top();
+        queueO.pop();
+
+        C.insert(beforeCell);
+        if(beforeCell.i == goalI && beforeCell.j == goalJ) {
+            break;
+        }
+
+        for(int pos=4; pos<8; pos++) {
             int i = beforeCell.i + nextPosition[pos][0];
             int j = beforeCell.j + nextPosition[pos][1];
 
             if( !isOutofBound(i, j) ) {
-                if( obstacle[i][j] != 0 ) continue;
-                bool isExist = false;
-                for(auto &c : C) {
-                    if( c.i == i && c.j == j ) {
-                        isExist = true;
-                        break;
-                    }
-                }
-                if( isExist ) continue;
+                if( obstacle[i][j] == 1 ) continue;
+
+                Cell nextCell;
                 nextCell.i = i; nextCell.j = j;
                 nextCell.GScore = beforeCell.GScore + nextPosition[pos][2];
-                nextCell.calHScore();
-                nextCell.calFScore();
                 nextCell.pi = beforeCell.i;
-                nextCell.pj = beforeCell.j;
-
-                for(auto &o : O) {
-                    if( o.i == i && o.j == j ) {
-                        isExist = true;
-                        if( o.FScore > nextCell.FScore ) {
-                            o = nextCell;
+                nextCell.pj = beforeCell.j; 
+                if(C.find(nextCell) == C.end()) {
+                    auto iter = setO.find(nextCell);
+                    if(iter != setO.end()) {
+                        if(iter->getF() > nextCell.getF()) {
+                            iter->pi = beforeCell.i;
+                            iter->pi = beforeCell.j;
+                            iter->GScore = beforeCell.GScore + nextPosition[pos][2]; 
+                            //*iter = nextCell; 
                         }
-                        break;
+                    }
+                    else {
+                        setO.insert(nextCell); 
+                        queueO.push(nextCell); 
                     }
                 }
-                if( !isExist ) {
-                    O.push_back( nextCell );
-                }
             }
-        }
+        } 
     }
 
-    int traceI = C.back().pi, traceJ = C.back().pj;
-    while( traceI != fromI || traceJ != fromJ ) {
-        obstacle[ traceI ][ traceJ ] = -1;
-        for(vector<Cell>::iterator it = C.begin(); it != C.end(); ) {
-            if( it->i == traceI && it->j == traceJ ) {
-                traceI = it->pi;
-                traceJ = it->pj;
-                C.erase( it );
-                break;
-            } else {
-                it++;
-            }
+    auto iter = C.find(Cell(goalI, goalJ));
+    if(iter != C.end()) {
+        int traceI = goalI;
+        int traceJ = goalJ;
+        while( traceI != fromI || traceJ != fromJ ) {
+            obstacle[ traceI ][ traceJ ] = -1;
+            auto toFindParent = C.find(Cell(traceI, traceJ));
+            traceI = toFindParent->pi;
+            traceJ = toFindParent->pj;
         }
-    }
-    cout << traceI << " " << fromI << " " << traceJ << " " << fromJ << endl;
-    if( traceI == fromI && traceJ == fromJ ) {
-        hasPath = true;
-    } else {
-        hasPath = false;
-    }
+    } 
 }
 
 void initSDL() {
@@ -217,24 +217,24 @@ void render() {
             if( i == goalI && j == goalJ ) {
                 SDL_SetRenderDrawColor( renderer, 0, 0, 255, 0 );
                 SDL_RenderFillRect( renderer, &rect );
-                continue;
+                //continue;
             }
             if( i == fromI && j == fromJ ) {
                 SDL_SetRenderDrawColor( renderer, 0, 255, 0, 0 );
                 SDL_RenderFillRect( renderer, &rect );
-                continue;
+                //continue;
             }
             if( obstacle[i][j] == 1 ) {
                 SDL_SetRenderDrawColor( renderer, 100, 100, 100, 100 );
                 SDL_RenderFillRect( renderer, &rect );
-                continue;
+                //continue;
             }
-            if( obstacle[i][j] == -1  && hasPath ) {
+            if( obstacle[i][j] == -1) {
                 printf("%3d, %3d -> %3d, %3d path of one, [%3d][%3d]\n",fromI, fromJ, goalI, goalJ, i, j);
                 SDL_SetRenderDrawColor( renderer, 255, 0, 0, 0 );
                 SDL_RenderFillRect( renderer, &rect );
                 obstacle[i][j] = 0;
-                continue;
+                //continue;
             }
         }
     }
