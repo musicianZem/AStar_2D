@@ -135,20 +135,16 @@ int main() {
 void astar() {
     Cell firstCell( fromI, fromJ );
     firstCell.GScore = 0;
-    firstCell.pi = fromI;
-    firstCell.pj = fromJ;
+    firstCell.pi = fromI; firstCell.pj = fromJ;
     std::set<Cell, SetComparer> C;
     C.insert( firstCell );
-
     std::priority_queue<Cell> queueO;
     std::set<Cell, SetComparer> setO; 
     for(int pos=4; pos<8; pos++) {
         int i = firstCell.i + nextPosition[pos][0];
         int j = firstCell.j + nextPosition[pos][1];
-
         if( !isOutofBound(i, j) ) {
             if( obstacle[i][j] == 1) continue;
-
             Cell nextCell;
             nextCell.i = i; nextCell.j = j;
             nextCell.GScore = firstCell.GScore + nextPosition[pos][2];
@@ -158,23 +154,18 @@ void astar() {
             queueO.push(nextCell);
         }
     }
-
     while(!queueO.empty()) {
         Cell beforeCell = queueO.top();
         queueO.pop();
-
         C.insert(beforeCell);
         if(beforeCell.i == goalI && beforeCell.j == goalJ) {
             break;
         }
-
         for(int pos=4; pos<8; pos++) {
             int i = beforeCell.i + nextPosition[pos][0];
             int j = beforeCell.j + nextPosition[pos][1];
-
             if( !isOutofBound(i, j) ) {
                 if( obstacle[i][j] == 1 ) continue;
-
                 Cell nextCell;
                 nextCell.i = i; nextCell.j = j;
                 nextCell.GScore = beforeCell.GScore + nextPosition[pos][2];
@@ -187,7 +178,6 @@ void astar() {
                             iter->pi = beforeCell.i;
                             iter->pi = beforeCell.j;
                             iter->GScore = beforeCell.GScore + nextPosition[pos][2]; 
-                            //*iter = nextCell; 
                         }
                     }
                     else {
@@ -198,15 +188,12 @@ void astar() {
             }
         } 
     }
-
     auto iter = C.find(Cell(goalI, goalJ));
     if(iter != C.end()) {
-        int traceI = goalI;
-        int traceJ = goalJ;
+        int traceI = goalI, traceJ = goalJ;
         while( traceI != fromI || traceJ != fromJ ) {
             auto toFindParent = C.find(Cell(traceI, traceJ));
-            traceI = toFindParent->pi;
-            traceJ = toFindParent->pj;
+            traceI = toFindParent->pi; traceJ = toFindParent->pj;
             obstacle[ traceI ][ traceJ ] = -1;
         }
     } 
