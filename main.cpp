@@ -53,14 +53,14 @@ void initSDL();
 bool pollEvent();
 void render();
 void astar();
-void kstar();
+void astar();
 
 int main() {
     initSDL();
 
     while( !pollEvent() ) {
         SDL_RenderClear( renderer ); 
-        kstar();
+        astar();
         render(); 
         SDL_RenderPresent( renderer );
     }
@@ -69,18 +69,56 @@ int main() {
     SDL_Quit();
 }
 
-void kstar() {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void astar() {
     Cell firstCell( fromI, fromJ );
     firstCell.GScore = 0;
     firstCell.pi = fromI;
     firstCell.pj = fromJ;
     std::set<Cell, SetComparer> C;
     C.insert( firstCell );
-    obstacle[1][3] = 1;
-    obstacle[2][3] = 1;
-    obstacle[3][3] = 1;
-    obstacle[3][2] = 1;
-    obstacle[3][1] = 1; 
 
     std::priority_queue<Cell> queueO;
     std::set<Cell, SetComparer> setO; 
@@ -146,12 +184,13 @@ void kstar() {
         int traceI = goalI;
         int traceJ = goalJ;
         while( traceI != fromI || traceJ != fromJ ) {
-            obstacle[ traceI ][ traceJ ] = -1;
             auto toFindParent = C.find(Cell(traceI, traceJ));
             traceI = toFindParent->pi;
             traceJ = toFindParent->pj;
+            obstacle[ traceI ][ traceJ ] = -1;
         }
     } 
+    obstacle[ fromI ][ fromJ ] = 0;
 }
 
 void initSDL() {
@@ -201,6 +240,9 @@ bool pollEvent() {
                 if( e.button.button == SDL_BUTTON_RIGHT ) {
                 }
                 break;
+            case SDL_KEYDOWN :
+                memset(obstacle, 0, sizeof(obstacle));
+                break;
         }
     }
     return quit;
@@ -214,24 +256,23 @@ void render() {
         for(int j=0; j<90; j++) {
             rect.x = i*12;
             rect.y = j*12;
-            if( i == goalI && j == goalJ ) {
-                SDL_SetRenderDrawColor( renderer, 0, 0, 255, 0 );
-                SDL_RenderFillRect( renderer, &rect );
-                //continue;
-            }
-            if( i == fromI && j == fromJ ) {
-                SDL_SetRenderDrawColor( renderer, 0, 255, 0, 0 );
-                SDL_RenderFillRect( renderer, &rect );
-                //continue;
-            }
             if( obstacle[i][j] == 1 ) {
                 SDL_SetRenderDrawColor( renderer, 100, 100, 100, 100 );
                 SDL_RenderFillRect( renderer, &rect );
                 //continue;
             }
+            if( i == goalI && j == goalJ ) {
+                SDL_SetRenderDrawColor( renderer, 0, 0, 255, 255 );
+                SDL_RenderFillRect( renderer, &rect );
+                //continue;
+            }
+            if( i == fromI && j == fromJ ) {
+                SDL_SetRenderDrawColor( renderer, 0, 255, 0, 255 );
+                SDL_RenderFillRect( renderer, &rect );
+                //continue;
+            }
             if( obstacle[i][j] == -1) {
-                printf("%3d, %3d -> %3d, %3d path of one, [%3d][%3d]\n",fromI, fromJ, goalI, goalJ, i, j);
-                SDL_SetRenderDrawColor( renderer, 255, 0, 0, 0 );
+                SDL_SetRenderDrawColor( renderer, 255, 0, 0, 255 );
                 SDL_RenderFillRect( renderer, &rect );
                 obstacle[i][j] = 0;
                 //continue;
