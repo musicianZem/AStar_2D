@@ -112,6 +112,26 @@ int main() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void astar() {
     Cell firstCell( fromI, fromJ );
     firstCell.GScore = 0;
