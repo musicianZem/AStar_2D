@@ -1,10 +1,11 @@
 CMAKE_MINIMUM_REQUIRED ( VERSION 2.8 ) 
 
-SET ( CMAKE_CXX_FLAGS "-std=c++14 -w")
+SET ( CMAKE_CXX_FLAGS "-std=c++11 -w")
 
 INCLUDE_DIRECTORIES( 
     ${CMAKE_SOURCE_DIR}
     )
+
 SET ( SRC_FILES
     main.cpp
     )
