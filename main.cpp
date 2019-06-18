@@ -9,11 +9,6 @@ using namespace std;
 int obstacle[160][90];
 int fromI = 0, fromJ = 0, goalI = 15, goalJ = 8;
 bool hasPath = true;
-int nextPosition[8][3] = {
-    {-1, -1, 3}, {-1,  1, 3}, { 1, -1, 3}, { 1,  1, 3},
-    {-1,  0, 2}, { 1,  0, 2}, { 0, -1, 2}, { 0,  1, 2}
-};
-
 bool isOutofBound(int i, int j) {
     return i < 0 || i >= 160 || j < 0 || j >= 90;
 }
@@ -21,10 +16,8 @@ bool isOutofBound(int i, int j) {
 class Cell {
     public :
         int i, j;
-        // F : total
-        // G : 이 Cell까지 걸린 비용
-        // H : 예상 비용
-        mutable int FScore, GScore, HScore;
+        // GScore : 이 Cell까지 걸린 비용
+        mutable int GScore;
         mutable int pi, pj;
 
         Cell(int i = 0, int j = 0) : i(i), j(j) {} 
@@ -69,70 +62,13 @@ int main() {
     SDL_Quit();
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void astar() {
+
+    const int nextPosition[8][3] = {
+        {-1, -1, 3}, {-1,  1, 3}, { 1, -1, 3}, { 1,  1, 3},
+        {-1,  0, 2}, { 1,  0, 2}, { 0, -1, 2}, { 0,  1, 2}
+    };
+
     Cell firstCell( fromI, fromJ );
     firstCell.GScore = 0;
     firstCell.pi = fromI; firstCell.pj = fromJ;
@@ -188,6 +124,7 @@ void astar() {
             }
         } 
     }
+
     auto iter = C.find(Cell(goalI, goalJ));
     if(iter != C.end()) {
         int traceI = goalI, traceJ = goalJ;
@@ -202,7 +139,7 @@ void astar() {
 
 void initSDL() {
     SDL_Init(SDL_INIT_EVERYTHING);
-    window = SDL_CreateWindow("ASTAR", 0, 0, 1600, 900, SDL_WINDOW_RESIZABLE);
+    window = SDL_CreateWindow("A Star Algorithm View On SDL Window", 0, 0, 1600, 900, SDL_WINDOW_RESIZABLE);
     renderer = SDL_CreateRenderer(window, -1, 0);
 }
 
